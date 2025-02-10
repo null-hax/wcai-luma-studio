@@ -10,6 +10,7 @@ export interface LumaAIGeneration {
   id: string;
   prompt?: string;
   state: 'pending' | 'completed' | 'failed';
+  created_at?: string;
   failure_reason?: string;
   aspect_ratio?: string;
   duration?: string;
@@ -28,6 +29,12 @@ export interface GenerateVideoResponse {
   id: string;
   url: string;
   filename: string;
+}
+
+export interface ListGenerationsResponse {
+  generations: VideoGeneration[];
+  hasMore: boolean;
+  nextOffset?: number;
 }
 
 export interface VideoGeneration {

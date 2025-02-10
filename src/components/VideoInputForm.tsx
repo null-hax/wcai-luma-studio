@@ -76,13 +76,13 @@ export default function VideoInputForm({ onGenerationStart, onGenerationComplete
   };
 
   return (
-    <form onSubmit={handleSubmit} className="mb-8 space-y-4 sticky top-0 z-10 bg-black pbß-8">
+    <form onSubmit={handleSubmit} className="space-y-4">
       <div className="space-y-2">
-        <label className="block text-sm font-medium">Prompt:</label>
+        <label className="block text-sm text-gray-400">Prompt:</label>
         <textarea
           value={prompt}
           onChange={(e) => setPrompt(e.target.value)}
-          className="w-full p-2 bg-gray-900 text-white rounded-lg border border-gray-700 focus:border-white focus:ring-2 focus:ring-white focus:outline-none"
+          className="w-full p-3 bg-gray-900 text-white rounded-lg border border-gray-800 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none resize-none"
           rows={3}
           placeholder="Enter your prompt..."
           disabled={disabled}
@@ -91,11 +91,11 @@ export default function VideoInputForm({ onGenerationStart, onGenerationComplete
       
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div className="space-y-2">
-          <label className="block text-sm font-medium">Aspect Ratio:</label>
+          <label className="block text-sm text-gray-400">Aspect Ratio:</label>
           <select
             value={aspectRatio}
             onChange={(e) => setAspectRatio(e.target.value as AspectRatio)}
-            className="w-full p-2 bg-gray-900 text-white rounded-lg border border-gray-700 focus:border-white focus:ring-2 focus:ring-white focus:outline-none"
+            className="w-full p-3 bg-gray-900 text-white rounded-lg border border-gray-800 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none appearance-none"
             disabled={disabled}
           >
             {Object.entries(ASPECT_RATIO_LABELS).map(([value, label]) => (
@@ -105,11 +105,11 @@ export default function VideoInputForm({ onGenerationStart, onGenerationComplete
         </div>
         
         <div className="space-y-2">
-          <label className="block text-sm font-medium">Duration:</label>
+          <label className="block text-sm text-gray-400">Duration:</label>
           <select
             value={duration}
             onChange={(e) => setDuration(e.target.value)}
-            className="w-full p-2 bg-gray-900 text-white rounded-lg border border-gray-700 focus:border-white focus:ring-2 focus:ring-white focus:outline-none"
+            className="w-full p-3 bg-gray-900 text-white rounded-lg border border-gray-800 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none appearance-none"
             disabled={disabled}
           >
             <option value="5s">5 seconds</option>
@@ -127,11 +127,11 @@ export default function VideoInputForm({ onGenerationStart, onGenerationComplete
       <button
         type="submit"
         disabled={disabled || !prompt.trim()}
-        className={`w-full py-2 px-4 ${
+        className={`w-full py-3 px-4 ${
           disabled || !prompt.trim()
-            ? 'bg-gray-600 cursor-not-allowed'
-            : 'bg-blue-600 hover:bg-blue-700'
-        } text-white font-medium rounded-lg transition-colors`}
+            ? 'bg-gray-700 cursor-not-allowed'
+            : 'bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600'
+        } text-white font-medium rounded-lg transition-all duration-200`}
       >
         {disabled ? 'Queue Full' : 'Generate Video'}
       </button>

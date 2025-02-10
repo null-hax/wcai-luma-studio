@@ -1,17 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { readdir } from 'fs/promises';
 import { LumaAI } from 'lumaai';
-import fetch from 'node-fetch';
-import { writeFile, mkdir } from 'fs/promises';
-import { join, dirname } from 'path';
 import { 
   AspectRatio, 
   GenerateVideoRequest,
   VideoGeneration,
   LumaAIGeneration,
   DEFAULT_ASPECT_RATIO, 
-  DEFAULT_DURATION, 
-  DEFAULT_RESOLUTION 
+  DEFAULT_DURATION
 } from '@/types/video';
 
 function getLumaAIClient(apiKey: string) {
@@ -27,31 +22,42 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Please set your API key in settings first' }, { status: 401 });
     }
 
+    const offset = parseInt(request.nextUrl.searchParams.get('offset') || '0');
+    const limit = 50;
+
     const client = getLumaAIClient(apiKey);
-    const response = await client.generations.list({ limit: 50 });
-    console.log('Generations response:', JSON.stringify(response, null, 2));
-    const generations = (Array.isArray(response) ? response : response.generations || []) as LumaAIGeneration[];
+    const response = await client.generations.list({ 
+      limit,
+      offset
+    });
 
-    // Get list of local video files
-    const videosDir = join(process.cwd(), 'public', 'videos');
-    const files = await readdir(videosDir);
-    const videoFiles = files.filter(file => file.endsWith('.mp4'));
+    let generations = (Array.isArray(response) ? response : response.generations || []) as LumaAIGeneration[];
+    // Sort by creation date in descending order
+    generations = generations.sort((a, b) => {
+      const dateA = new Date(a.created_at || 0);
+      const dateB = new Date(b.created_at || 0);
+      return dateB.getTime() - dateA.getTime();
+    });
+    const hasMore = generations.length === limit;
 
-    // Filter out failed generations and map to include local file URLs
+    // Filter out failed generations and map to include video URLs
     const generationsWithUrls: VideoGeneration[] = generations
       .filter(gen => gen.state !== 'failed')
       .map(gen => ({
-      id: gen.id,
-      prompt: gen.request?.prompt || gen.prompt || 'Unknown prompt',
-      status: gen.state as 'pending' | 'completed' | 'failed',
-      url: videoFiles.includes(`${gen.id}.mp4`) ? `/videos/${gen.id}.mp4` : undefined,
-      thumbnailUrl: gen.assets?.image,
-      aspectRatio: (gen.aspect_ratio as AspectRatio) || DEFAULT_ASPECT_RATIO,
-      duration: gen.duration || DEFAULT_DURATION
-    }));
+        id: gen.id,
+        prompt: gen.request?.prompt || gen.prompt || 'Unknown prompt',
+        status: gen.state as 'pending' | 'completed' | 'failed',
+        url: gen.assets?.video,
+        thumbnailUrl: gen.assets?.image,
+        aspectRatio: (gen.aspect_ratio as AspectRatio) || DEFAULT_ASPECT_RATIO,
+        duration: gen.duration || DEFAULT_DURATION
+      }));
 
-    // Return generations in reverse chronological order
-    return NextResponse.json(generationsWithUrls.reverse());
+    return NextResponse.json({
+      generations: generationsWithUrls,
+      hasMore,
+      nextOffset: hasMore ? offset + limit : undefined
+    });
   } catch (error: any) {
     console.error('Error listing generations:', error);
     return NextResponse.json({ 
@@ -111,22 +117,19 @@ export async function POST(request: NextRequest) {
     }
 
     let completed = false;
-    let downloadUrl = "";
+    let finalGeneration = generation;
 
     // Poll generation status
     while (!completed) {
-      const updatedGeneration = await client.generations.get(generation.id as string);
+      finalGeneration = await client.generations.get(generation.id as string);
       
-      switch (updatedGeneration.state) {
+      switch (finalGeneration.state) {
         case "completed":
           completed = true;
-          if (updatedGeneration.assets && updatedGeneration.assets.video) {
-            downloadUrl = updatedGeneration.assets.video;
-          }
           break;
         case "failed":
           return NextResponse.json(
-            { error: `Generation failed: ${updatedGeneration.failure_reason || 'Unknown error'}` },
+            { error: `Generation failed: ${finalGeneration.failure_reason || 'Unknown error'}` },
             { status: 500 }
           );
         default:
@@ -134,37 +137,14 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Download the video file
-    if (!downloadUrl) {
-      return NextResponse.json({ error: 'No download URL found' }, { status: 500 });
+    if (!finalGeneration.assets?.video) {
+      return NextResponse.json({ error: 'No video URL found' }, { status: 500 });
     }
 
-    const response = await fetch(downloadUrl);
-    if (!response.ok) {
-      return NextResponse.json({ error: 'Failed to download video' }, { status: 500 });
-    }
-
-    // Get the buffer once and reuse it
-    const buffer = await response.arrayBuffer();
-
-    // Save file to public directory
-    const outputFilePath = join(process.cwd(), 'public', 'videos');
-    try {
-      await mkdir(outputFilePath, { recursive: true });
-      await writeFile(join(outputFilePath, `${generation.id}.mp4`), Buffer.from(buffer));
-    } catch (error) {
-      console.error('Error saving video:', error);
-      throw error;
-    }
-
-    // Get the updated generation to get the thumbnail URL
-    const finalGeneration = await client.generations.get(generation.id as string);
-    
     return NextResponse.json({
-      id: generation.id,
-      url: downloadUrl,
-      filename: `${generation.id}.mp4`,
-      thumbnailUrl: finalGeneration.assets?.image
+      id: finalGeneration.id,
+      url: finalGeneration.assets.video,
+      thumbnailUrl: finalGeneration.assets.image
     });
 
   } catch (error: any) {
