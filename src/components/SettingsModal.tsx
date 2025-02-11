@@ -7,9 +7,10 @@ import { RiSettings4Line } from 'react-icons/ri';
 interface SettingsModalProps {
   isOpen: boolean;
   onClose: () => void;
+  onSave?: (apiKey: string) => void;
 }
 
-export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
+export default function SettingsModal({ isOpen, onClose, onSave }: SettingsModalProps) {
   const [apiKey, setApiKey] = useState('');
 
   useEffect(() => {
@@ -19,9 +20,12 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
     }
   }, []);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     localStorage.setItem('lumaai-api-key', apiKey);
+    if (onSave) {
+      onSave(apiKey);
+    }
     onClose();
   };
 

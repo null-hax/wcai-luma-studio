@@ -8,43 +8,22 @@ import { VideoGeneration, MAX_CONCURRENT_GENERATIONS, ListGenerationsResponse } 
 
 export default function Page() {
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
-  const [gridRef, setGridRef] = useState<{ addGeneration: (generation: VideoGeneration) => void } | null>(null);
+  const [gridRef, setGridRef] = useState<{ 
+    addGeneration: (generation: VideoGeneration) => void;
+    reset: () => void;
+  } | null>(null);
   const [activeGenerations, setActiveGenerations] = useState<number>(0);
+  const [apiKey, setApiKey] = useState<string | null>(null);
 
-  // Load initial generations
+  // Check for API key on mount
   useEffect(() => {
-    const loadGenerations = async () => {
-      try {
-        const apiKey = localStorage.getItem('lumaai-api-key');
-        if (!apiKey) return;
+    const savedApiKey = localStorage.getItem('lumaai-api-key');
+    setApiKey(savedApiKey);
+  }, []);
 
-        const response = await fetch('/api/generateVideo', {
-          headers: {
-            'x-api-key': apiKey,
-          },
-        });
-        
-        if (!response.ok) return;
-        
-        const data = await response.json() as ListGenerationsResponse;
-        const pendingGenerations = data.generations.filter((gen: VideoGeneration) => gen.status === 'pending');
-        
-        // Add all generations to grid
-        data.generations.forEach((generation: VideoGeneration) => {
-          if (gridRef) {
-            gridRef.addGeneration(generation);
-          }
-        });
-
-        // Update active generations count
-        setActiveGenerations(pendingGenerations.length);
-      } catch (error) {
-        console.error('Error loading generations:', error);
-      }
-    };
-
-    loadGenerations();
-  }, [gridRef]);
+  const handleApiKeySave = useCallback((newApiKey: string) => {
+    setApiKey(newApiKey);
+  }, []);
 
   const handleGenerationStart = useCallback((generation: VideoGeneration) => {
     if (gridRef) {
@@ -73,7 +52,7 @@ export default function Page() {
                   View source code
                 </a>
               </p>
-              {activeGenerations > 0 && (
+              {activeGenerations > 0 && apiKey && (
                 <p className="text-sm text-gray-400 mt-1">
                   {activeGenerations} of {MAX_CONCURRENT_GENERATIONS} generations in progress
                 </p>
@@ -90,21 +69,45 @@ export default function Page() {
             </button>
           </div>
           
-          <VideoInputForm 
-            onGenerationStart={handleGenerationStart}
-            onGenerationComplete={handleGenerationComplete}
-            disabled={activeGenerations >= MAX_CONCURRENT_GENERATIONS}
-          />
+          {apiKey && (
+            <VideoInputForm 
+              onGenerationStart={handleGenerationStart}
+              onGenerationComplete={handleGenerationComplete}
+              disabled={activeGenerations >= MAX_CONCURRENT_GENERATIONS}
+            />
+          )}
         </div>
       </div>
 
       <div className="max-w-7xl mx-auto px-8 py-8">
-        <VideoDisplayGrid onRef={setGridRef} />
+        {!apiKey ? (
+          <div className="py-16 text-center">
+            <div className="bg-gray-800/50 rounded-lg p-8 max-w-2xl mx-auto">
+              <h2 className="text-2xl font-semibold mb-4">Welcome to Luma API Sequencer!</h2>
+              <p className="text-gray-400 mb-6">
+                To get started, you'll need to set up your LumaAI API key.<br />
+                Click the button below to configure your settings.
+              </p>
+              <button
+                onClick={() => setIsSettingsModalOpen(true)}
+                className="bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg px-6 py-3 transition-colors inline-flex items-center gap-2"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.532 1.532 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z" clipRule="evenodd" />
+                </svg>
+                Configure API Key
+              </button>
+            </div>
+          </div>
+        ) : (
+          <VideoDisplayGrid onRef={setGridRef} apiKey={apiKey} />
+        )}
       </div>
       
       <SettingsModal
         isOpen={isSettingsModalOpen}
         onClose={() => setIsSettingsModalOpen(false)}
+        onSave={handleApiKeySave}
       />
     </div>
   );

@@ -5,7 +5,11 @@ import { VideoGeneration, ListGenerationsResponse } from '../types/video';
 import VideoPlayer from './VideoPlayer';
 
 interface VideoDisplayGridProps {
-  onRef?: (ref: { addGeneration: (generation: VideoGeneration) => void }) => void;
+  onRef?: (ref: { 
+    addGeneration: (generation: VideoGeneration) => void;
+    reset: () => void;
+  }) => void;
+  apiKey: string | null;
 }
 
 const LoadingSkeleton = () => (
@@ -22,7 +26,7 @@ const LoadingSkeleton = () => (
   </div>
 );
 
-export default function VideoDisplayGrid({ onRef }: VideoDisplayGridProps) {
+export default function VideoDisplayGrid({ onRef, apiKey }: VideoDisplayGridProps) {
   const [generations, setGenerations] = useState<VideoGeneration[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
@@ -32,7 +36,6 @@ export default function VideoDisplayGrid({ onRef }: VideoDisplayGridProps) {
 
   const loadGenerations = async (currentOffset: number) => {
     try {
-      const apiKey = localStorage.getItem('lumaai-api-key');
       if (!apiKey) return;
 
       const response = await fetch(`/api/generateVideo?offset=${currentOffset}`, {
@@ -48,7 +51,13 @@ export default function VideoDisplayGrid({ onRef }: VideoDisplayGridProps) {
       if (currentOffset === 0) {
         setGenerations(data.generations);
       } else {
-        setGenerations(prev => [...prev, ...data.generations]);
+        setGenerations(prev => {
+          // Filter out any duplicates from the new data
+          const newGenerations = data.generations.filter(
+            newGen => !prev.some(existingGen => existingGen.id === newGen.id)
+          );
+          return [...prev, ...newGenerations];
+        });
       }
       
       setHasMore(data.hasMore);
@@ -67,11 +76,11 @@ export default function VideoDisplayGrid({ onRef }: VideoDisplayGridProps) {
   // Initial load
   useEffect(() => {
     loadGenerations(0);
-  }, []);
+  }, [apiKey]);
 
   // Infinite scroll
   useEffect(() => {
-    if (!loadMoreRef.current || !hasMore || isLoadingMore) return;
+    if (!loadMoreRef.current || !hasMore || isLoadingMore || !apiKey) return;
 
     const observer = new IntersectionObserver(
       entries => {
@@ -85,7 +94,15 @@ export default function VideoDisplayGrid({ onRef }: VideoDisplayGridProps) {
 
     observer.observe(loadMoreRef.current);
     return () => observer.disconnect();
-  }, [hasMore, isLoadingMore, offset]);
+  }, [hasMore, isLoadingMore, offset, apiKey]);
+
+  const reset = useCallback(() => {
+    setGenerations([]);
+    setOffset(0);
+    setHasMore(true);
+    setIsLoading(true);
+    loadGenerations(0);
+  }, []);
 
   const addGeneration = useCallback((generation: VideoGeneration) => {
     setGenerations(prev => {
@@ -110,12 +127,16 @@ export default function VideoDisplayGrid({ onRef }: VideoDisplayGridProps) {
     }
   };
 
-  // Expose addGeneration function to parent
+  // Expose functions to parent
   useEffect(() => {
     if (onRef) {
-      onRef({ addGeneration });
+      onRef({ addGeneration, reset });
     }
-  }, [onRef, addGeneration]);
+  }, [onRef, addGeneration, reset]);
+
+  if (!apiKey) {
+    return null;
+  }
 
   if (isLoading) {
     return <LoadingSkeleton />;
