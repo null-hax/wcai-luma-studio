@@ -4,7 +4,7 @@ import { useState, useCallback, useEffect } from 'react';
 import VideoInputForm from '../components/VideoInputForm';
 import VideoDisplayGrid from '../components/VideoDisplayGrid';
 import SettingsModal from '../components/SettingsModal';
-import { VideoGeneration, MAX_CONCURRENT_GENERATIONS, ListGenerationsResponse } from '../types/video';
+import { VideoGeneration, MAX_CONCURRENT_GENERATIONS } from '../types/video';
 
 export default function Page() {
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
@@ -85,7 +85,7 @@ export default function Page() {
             <div className="bg-gray-800/50 rounded-lg p-8 max-w-2xl mx-auto">
               <h2 className="text-2xl font-semibold mb-4">Welcome to Luma API Sequencer!</h2>
               <p className="text-gray-400 mb-6">
-                To get started, you'll need to set up your LumaAI API key.<br />
+                To get started, you will need to set up your LumaAI API key.<br />
                 Click the button below to configure your settings.
               </p>
               <button
