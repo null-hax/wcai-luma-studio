@@ -5,10 +5,9 @@ import { useState, useRef, useEffect } from 'react';
 interface VideoPlayerProps {
   url?: string;
   thumbnailUrl?: string;
-  aspectRatio: string;
 }
 
-export default function VideoPlayer({ url, thumbnailUrl, aspectRatio }: VideoPlayerProps) {
+export default function VideoPlayer({ url, thumbnailUrl }: VideoPlayerProps) {
   const [isHovering, setIsHovering] = useState(false);
   const [isVideoLoaded, setIsVideoLoaded] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);

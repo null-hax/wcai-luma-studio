@@ -16,7 +16,6 @@ interface GenerateVideoRequest {
 
 const DEFAULT_ASPECT_RATIO = "16:9";
 const DEFAULT_DURATION = "5s";
-const DEFAULT_RESOLUTION = "720p";
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
@@ -39,34 +38,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     // Create generation with ray-2 model
-
-    // Convert aspect ratio to resolution
-    let resolution = "1920x1080"; // default 16:9
-    switch (safeAspectRatio) {
-      case "1:1":
-        resolution = "1080x1080";
-        break;
-      case "9:16":
-        resolution = "1080x1920";
-        break;
-      case "4:3":
-        resolution = "1440x1080";
-        break;
-      case "3:4":
-        resolution = "1080x1440";
-        break;
-      case "21:9":
-        resolution = "2560x1080";
-        break;
-      case "9:21":
-        resolution = "1080x2560";
-        break;
-    }
-
     const generation = await client.generations.create({
       prompt,
       model: "ray-2",
-      resolution,
+      resolution: "720p",
       duration: safeLength,
     });
 

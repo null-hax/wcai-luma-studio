@@ -103,7 +103,7 @@ export default function VideoInputForm({ onGenerationStart, onGenerationComplete
               className="bg-transparent text-gray-400 outline-none appearance-none cursor-pointer disabled:cursor-not-allowed"
               disabled={disabled}
             >
-              {Object.entries(ASPECT_RATIO_LABELS).map(([value, label]) => (
+              {Object.entries(ASPECT_RATIO_LABELS).map(([value]) => (
                 <option key={value} value={value}>{value}</option>
               ))}
             </select>

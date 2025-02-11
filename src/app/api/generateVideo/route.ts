@@ -24,7 +24,7 @@ export async function GET(request: NextRequest) {
     }
 
     const offset = parseInt(request.nextUrl.searchParams.get('offset') || '0');
-    const limit = 50;
+    const limit = 20;
 
     const client = getLumaAIClient(apiKey);
     const response = await client.generations.list({ 
@@ -89,11 +89,11 @@ export async function GET(request: NextRequest) {
       hasMore,
       nextOffset: hasMore ? offset + limit : undefined
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error listing generations:', error);
     return NextResponse.json({ 
-      error: error?.message || 'An unexpected error occurred',
-      code: error?.code
+      error: error instanceof Error ? error.message : 'An unexpected error occurred',
+      code: error instanceof Error ? error.cause : undefined
     }, { status: 500 });
   }
 }

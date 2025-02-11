@@ -150,7 +150,6 @@ export default function VideoDisplayGrid({ onRef }: VideoDisplayGridProps) {
                 <VideoPlayer
                   url={generation.url}
                   thumbnailUrl={generation.thumbnailUrl}
-                  aspectRatio={generation.aspectRatio}
                 />
               )}
             </div>
