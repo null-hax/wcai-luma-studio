@@ -1,4 +1,3 @@
-ai
 # WCAI Studio
 
 WCAI Studio is a modern web application that enables users to generate and manage videos using AI technologies. Built with Next.js and powered by LumaAI, it provides an intuitive interface for video generation and manipulation.
