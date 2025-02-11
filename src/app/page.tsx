@@ -64,7 +64,7 @@ export default function Page() {
           <div className="flex justify-between items-center mb-6">
             <div>
               <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-500 to-purple-500 bg-clip-text text-transparent">Luma API Sequencer</h1>
-              <p className="text-sm text-gray-400">by West Coast AI Labs</p>
+              <p className="text-sm text-gray-400">by <a href="https://nullhax.com" className="hover:underline" target="_blank">null_hax</a> // <a href="https://westcoastai.xyz" className="hover:underline" target="_blank">West Coast AI Labs</a></p>
               {activeGenerations > 0 && (
                 <p className="text-sm text-gray-400 mt-1">
                   {activeGenerations} of {MAX_CONCURRENT_GENERATIONS} generations in progress
