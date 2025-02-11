@@ -10,7 +10,7 @@ interface VideoDisplayGridProps {
 
 const LoadingSkeleton = () => (
   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-7xl mx-auto">
-    {[...Array(6)].map((_, i) => (
+    {[...Array(12)].map((_, i) => (
       <div key={i} className="bg-gray-800 rounded-lg overflow-hidden animate-pulse">
         <div className="aspect-video bg-gray-700" />
         <div className="p-3">

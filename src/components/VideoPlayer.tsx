@@ -120,7 +120,7 @@ export default function VideoPlayer({ url, thumbnailUrl, aspectRatio }: VideoPla
         <img
           src={thumbnailUrl}
           alt="Video thumbnail"
-          className="absolute inset-0 w-full h-full object-cover"
+          className="absolute inset-0 w-full h-full object-contain"
         />
       )}
 
@@ -134,7 +134,7 @@ export default function VideoPlayer({ url, thumbnailUrl, aspectRatio }: VideoPla
       {url && (
         <video
           ref={videoRef}
-          className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-300 ${
+          className={`absolute inset-0 w-full h-full object-contain transition-opacity duration-300 ${
             isHovering ? 'opacity-100' : 'opacity-0'
           }`}
           loop
