@@ -59,8 +59,9 @@ export default function SettingsModal({ isOpen, onClose }: SettingsModalProps) {
                 placeholder="Enter your API key..."
                 autoComplete="new-password"
               />
-              <p className="mt-1 text-sm text-gray-400">
-                Your API key will be stored securely in your browser.
+              <p className="mt-2 text-sm text-gray-400">Get an API key <a href="https://lumalabs.ai/dream-machine/api/keys" className="text-blue-400 hover:underline" target="_blank">here</a>.</p>
+              <p className="mt-2 text-sm text-gray-400">
+                Your API key is stored securely in your browser and is not shared with anyone. You can confirm this by checking the code <a href="https://github.com/null-hax/wcai-luma-studio/blob/main/src/components/SettingsModal.tsx" className="text-blue-400 hover:underline" target="_blank">here</a>.
               </p>
             </div>
             
