@@ -76,65 +76,59 @@ export default function VideoInputForm({ onGenerationStart, onGenerationComplete
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      <div className="space-y-2">
-        <label className="block text-sm text-gray-400">Prompt:</label>
-        <textarea
-          value={prompt}
-          onChange={(e) => setPrompt(e.target.value)}
-          className="w-full p-3 bg-gray-900 text-white rounded-lg border border-gray-800 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none resize-none"
-          rows={3}
-          placeholder="Enter your prompt..."
-          disabled={disabled}
-        />
-      </div>
-      
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <label className="block text-sm text-gray-400">Aspect Ratio:</label>
-          <select
-            value={aspectRatio}
-            onChange={(e) => setAspectRatio(e.target.value as AspectRatio)}
-            className="w-full p-3 bg-gray-900 text-white rounded-lg border border-gray-800 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none appearance-none"
+    <form onSubmit={handleSubmit} className="relative">
+      <div className="flex items-center gap-2 p-2 bg-slate-900 rounded-2xl">
+        <div className="flex-1 flex items-center gap-2">
+          <textarea
+            value={prompt}
+            onChange={(e) => setPrompt(e.target.value)}
+            className="flex-1 bg-transparent text-white placeholder-gray-500 outline-none resize-none pl-4 min-h-[24px] pt-6"
+            onInput={(e) => {
+              const target = e.target as HTMLTextAreaElement;
+              target.style.height = 'auto';
+              target.style.height = target.scrollHeight + 'px';
+            }}
+            placeholder="What do you want to see..."
             disabled={disabled}
+          />
+          <div className="flex items-center gap-2">
+            <select
+              value={aspectRatio}
+              onChange={(e) => setAspectRatio(e.target.value as AspectRatio)}
+              className="bg-transparent text-gray-400 outline-none appearance-none cursor-pointer disabled:cursor-not-allowed"
+              disabled={disabled}
+            >
+              {Object.entries(ASPECT_RATIO_LABELS).map(([value, label]) => (
+                <option key={value} value={value}>{value}</option>
+              ))}
+            </select>
+            <div className="text-gray-400">·</div>
+            <button
+              type="button"
+              onClick={() => setDuration(duration === '5s' ? '9s' : '5s')}
+              className="text-gray-400 hover:text-gray-300 disabled:cursor-not-allowed disabled:opacity-50"
+              disabled={disabled}
+            >
+              {duration}
+            </button>
+          </div>
+          <button
+            type="submit"
+            disabled={disabled || !prompt.trim()}
+            className="p-2 rounded-full hover:bg-white/10 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {Object.entries(ASPECT_RATIO_LABELS).map(([value, label]) => (
-              <option key={value} value={value}>{label}</option>
-            ))}
-          </select>
-        </div>
-        
-        <div className="space-y-2">
-          <label className="block text-sm text-gray-400">Duration:</label>
-          <select
-            value={duration}
-            onChange={(e) => setDuration(e.target.value)}
-            className="w-full p-3 bg-gray-900 text-white rounded-lg border border-gray-800 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none appearance-none"
-            disabled={disabled}
-          >
-            <option value="5s">5 seconds</option>
-            <option value="9s">9 seconds</option>
-          </select>
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5 text-gray-400">
+              <path d="M3.478 2.404a.75.75 0 0 0-.926.941l2.432 7.905H13.5a.75.75 0 0 1 0 1.5H4.984l-2.432 7.905a.75.75 0 0 0 .926.94 60.519 60.519 0 0 0 18.445-8.986.75.75 0 0 0 0-1.218A60.517 60.517 0 0 0 3.478 2.404Z" />
+            </svg>
+          </button>
         </div>
       </div>
       
       {error && (
-        <div className="text-red-500 text-sm mt-2">
+        <div className="absolute left-0 -bottom-6 text-red-500 text-sm">
           {error}
         </div>
       )}
-      
-      <button
-        type="submit"
-        disabled={disabled || !prompt.trim()}
-        className={`w-full py-3 px-4 ${
-          disabled || !prompt.trim()
-            ? 'bg-gray-700 cursor-not-allowed'
-            : 'bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600'
-        } text-white font-medium rounded-lg transition-all duration-200`}
-      >
-        {disabled ? 'Queue Full' : 'Generate Video'}
-      </button>
     </form>
   );
 }
