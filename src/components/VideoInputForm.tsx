@@ -20,9 +20,12 @@ export default function VideoInputForm({ onGenerationStart, onGenerationComplete
     e.preventDefault();
     setError(null);
 
-    const generationId = uuidv4();
-    const generation: VideoGeneration = {
-      id: generationId,
+    let pollInterval: NodeJS.Timeout | null = null;
+    let pollTimeout: NodeJS.Timeout | null = null;
+
+    // Create initial generation object with temporary ID
+    const initialGeneration: VideoGeneration = {
+      id: uuidv4(), // Temporary ID
       prompt,
       status: 'pending',
       aspectRatio,
@@ -36,9 +39,7 @@ export default function VideoInputForm({ onGenerationStart, onGenerationComplete
         return;
       }
 
-      // Add the initial pending generation to the grid
-      onGenerationStart(generation);
-
+      // Start the generation
       const response = await fetch('/api/generateVideo', {
         method: 'POST',
         headers: {
@@ -58,21 +59,77 @@ export default function VideoInputForm({ onGenerationStart, onGenerationComplete
         throw new Error(data.error || 'Failed to generate video');
       }
 
-      // Update the generation with completed status, thumbnail, and metadata
-      const updatedGeneration = {
-        ...generation,
-        status: 'completed' as const,
-        url: data.url,
-        thumbnailUrl: data.thumbnailUrl,
-        aspectRatio: data.aspectRatio || generation.aspectRatio,
-        duration: data.duration || generation.duration
+      // Create generation object with the API ID
+      const generation: VideoGeneration = {
+        id: data.id,
+        prompt,
+        status: 'pending',
+        aspectRatio: data.aspectRatio || aspectRatio,
+        duration: data.duration || duration
       };
-      onGenerationStart(updatedGeneration);
+
+      // Add the pending generation to the grid
+      onGenerationStart(generation);
+
+      // Start polling for the video status
+      pollInterval = setInterval(async () => {
+        try {
+          const statusResponse = await fetch(`/api/generateVideo?offset=0`, {
+            headers: {
+              'x-api-key': apiKey,
+            },
+          });
+          
+          if (!statusResponse.ok) {
+            throw new Error('Failed to check video status');
+          }
+          
+          const statusData = await statusResponse.json();
+          const latestGeneration = statusData.generations.find((g: any) => g.id === data.id);
+          
+          if (latestGeneration) {
+            if (latestGeneration.status === 'completed') {
+              if (pollInterval) clearInterval(pollInterval);
+              if (pollTimeout) clearTimeout(pollTimeout);
+              onGenerationStart({
+                ...generation,
+                status: 'completed',
+                url: latestGeneration.url,
+                thumbnailUrl: latestGeneration.thumbnailUrl,
+                aspectRatio: latestGeneration.aspectRatio || generation.aspectRatio,
+                duration: latestGeneration.duration || generation.duration
+              });
+            } else if (latestGeneration.status === 'failed') {
+              if (pollInterval) clearInterval(pollInterval);
+              if (pollTimeout) clearTimeout(pollTimeout);
+              throw new Error(latestGeneration.error || 'Generation failed');
+            }
+          }
+        } catch (pollError) {
+          if (pollInterval) clearInterval(pollInterval);
+          if (pollTimeout) clearTimeout(pollTimeout);
+          throw pollError;
+        }
+      }, 5000); // Poll every 5 seconds
+
+      // Set a timeout to stop polling after 5 minutes
+      pollTimeout = setTimeout(() => {
+        if (pollInterval) {
+          clearInterval(pollInterval);
+          onGenerationStart({
+            ...generation,
+            status: 'failed',
+            error: 'Generation timed out after 5 minutes'
+          });
+        }
+      }, 5 * 60 * 1000); // 5 minutes
     } catch (err) {
       // Update the generation with failed status
-      generation.status = 'failed';
-      generation.error = err instanceof Error ? err.message : 'An error occurred';
-      onGenerationStart(generation);
+      onGenerationStart({
+        ...initialGeneration,
+        status: 'failed',
+        error: err instanceof Error ? err.message : 'An error occurred'
+      });
       setError(err instanceof Error ? err.message : 'An error occurred');
       console.error('Error generating video:', err);
     } finally {

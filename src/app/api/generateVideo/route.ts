@@ -149,37 +149,12 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to create generation' }, { status: 500 });
     }
 
-    let completed = false;
-    let finalGeneration: LumaAIGeneration = generation as LumaAIGeneration;
-
-    // Poll generation status
-    while (!completed) {
-      finalGeneration = await client.generations.get(generation.id as string) as LumaAIGeneration;
-      
-      switch (finalGeneration.state) {
-        case "completed":
-          completed = true;
-          break;
-        case "failed":
-          return NextResponse.json(
-            { error: `Generation failed: ${finalGeneration.failure_reason || 'Unknown error'}` },
-            { status: 500 }
-          );
-        default:
-          await new Promise(resolve => setTimeout(resolve, 3000));
-      }
-    }
-
-    if (!finalGeneration.assets?.video) {
-      return NextResponse.json({ error: 'No video URL found' }, { status: 500 });
-    }
-
+    // Return immediately after starting the generation
     return NextResponse.json({
-      id: finalGeneration.id,
-      url: finalGeneration.assets.video,
-      thumbnailUrl: finalGeneration.assets.image,
-      aspectRatio: (finalGeneration.aspect_ratio as AspectRatio) || generationOptions.aspect_ratio,
-      duration: finalGeneration.duration || generationOptions.duration
+      id: generation.id,
+      status: 'pending',
+      aspectRatio: generationOptions.aspect_ratio,
+      duration: generationOptions.duration
     });
 
   } catch (error: any) {
