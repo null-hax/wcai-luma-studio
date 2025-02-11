@@ -87,7 +87,7 @@ export default function VideoInputForm({ onGenerationStart, onGenerationComplete
           <textarea
             value={prompt}
             onChange={(e) => setPrompt(e.target.value)}
-            className="flex-1 bg-transparent text-white placeholder-gray-500 outline-none resize-none pl-4 min-h-[24px] py-6"
+            className="flex-1 bg-transparent text-white placeholder-gray-500 outline-none resize-none pl-4 min-h-[24px] pt-6"
             onInput={(e) => {
               const target = e.target as HTMLTextAreaElement;
               target.style.height = 'auto';
