@@ -16,6 +16,8 @@ function getLumaAIClient(apiKey: string) {
   });
 }
 
+export const maxDuration = 300;
+
 export async function GET(request: NextRequest) {
   try {
     const apiKey = request.headers.get('x-api-key');
