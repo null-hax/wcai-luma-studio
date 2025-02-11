@@ -6,7 +6,8 @@ import {
   VideoGeneration,
   LumaAIGeneration,
   DEFAULT_ASPECT_RATIO, 
-  DEFAULT_DURATION
+  DEFAULT_DURATION,
+  ASPECT_RATIO_LABELS
 } from '@/types/video';
 
 function getLumaAIClient(apiKey: string) {
@@ -31,27 +32,57 @@ export async function GET(request: NextRequest) {
       offset
     });
 
-    let generations = (Array.isArray(response) ? response : response.generations || []) as LumaAIGeneration[];
+    // Get full details for each generation
+    const generationsWithUrls: VideoGeneration[] = [];
+    const generations = (Array.isArray(response) ? response : response.generations || []) as LumaAIGeneration[];
+    
     // Sort by creation date in descending order
-    generations = generations.sort((a, b) => {
+    const sortedGenerations = generations.sort((a, b) => {
       const dateA = new Date(a.created_at || 0);
       const dateB = new Date(b.created_at || 0);
       return dateB.getTime() - dateA.getTime();
     });
+
     const hasMore = generations.length === limit;
 
-    // Filter out failed generations and map to include video URLs
-    const generationsWithUrls: VideoGeneration[] = generations
-      .filter(gen => gen.state !== 'failed')
-      .map(gen => ({
-        id: gen.id,
-        prompt: gen.request?.prompt || gen.prompt || 'Unknown prompt',
-        status: gen.state as 'pending' | 'completed' | 'failed',
-        url: gen.assets?.video,
-        thumbnailUrl: gen.assets?.image,
-        aspectRatio: (gen.aspect_ratio as AspectRatio) || DEFAULT_ASPECT_RATIO,
-        duration: gen.duration || DEFAULT_DURATION
-      }));
+    // Get full details for each generation
+    for (const gen of sortedGenerations) {
+      if (gen.state === 'failed') continue;
+      
+      try {
+        // Fetch full generation details to get accurate metadata
+        const fullGeneration = await client.generations.get(gen.id) as LumaAIGeneration;
+        
+        // Extract metadata from the full generation response
+        const metadata = {
+          aspectRatio: fullGeneration.aspect_ratio || fullGeneration.request?.aspect_ratio || gen.aspect_ratio,
+          duration: fullGeneration.duration || fullGeneration.request?.duration || gen.duration
+        };
+        
+        // Ensure we have valid metadata
+        const validatedMetadata = {
+          aspectRatio: metadata.aspectRatio && 
+            Object.keys(ASPECT_RATIO_LABELS).includes(metadata.aspectRatio) ? 
+            metadata.aspectRatio as AspectRatio : 
+            DEFAULT_ASPECT_RATIO,
+          duration: metadata.duration || DEFAULT_DURATION
+        };
+        
+        generationsWithUrls.push({
+          id: gen.id,
+          prompt: fullGeneration.request?.prompt || fullGeneration.prompt || gen.prompt || 'Unknown prompt',
+          status: fullGeneration.state as 'pending' | 'completed' | 'failed',
+          url: fullGeneration.assets?.video,
+          thumbnailUrl: fullGeneration.assets?.image,
+          aspectRatio: validatedMetadata.aspectRatio,
+          duration: validatedMetadata.duration
+        });
+      } catch (error) {
+        console.error(`Error fetching details for generation ${gen.id}:`, error);
+        // Skip this generation if we can't get its details
+        continue;
+      }
+    }
 
     return NextResponse.json({
       generations: generationsWithUrls,
@@ -117,11 +148,11 @@ export async function POST(request: NextRequest) {
     }
 
     let completed = false;
-    let finalGeneration = generation;
+    let finalGeneration: LumaAIGeneration = generation as LumaAIGeneration;
 
     // Poll generation status
     while (!completed) {
-      finalGeneration = await client.generations.get(generation.id as string);
+      finalGeneration = await client.generations.get(generation.id as string) as LumaAIGeneration;
       
       switch (finalGeneration.state) {
         case "completed":
@@ -144,7 +175,9 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       id: finalGeneration.id,
       url: finalGeneration.assets.video,
-      thumbnailUrl: finalGeneration.assets.image
+      thumbnailUrl: finalGeneration.assets.image,
+      aspectRatio: (finalGeneration.aspect_ratio as AspectRatio) || generationOptions.aspect_ratio,
+      duration: finalGeneration.duration || generationOptions.duration
     });
 
   } catch (error: any) {

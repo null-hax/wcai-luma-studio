@@ -58,11 +58,16 @@ export default function VideoInputForm({ onGenerationStart, onGenerationComplete
         throw new Error(data.error || 'Failed to generate video');
       }
 
-      // Update the generation with completed status and thumbnail
-      generation.status = 'completed';
-      generation.url = data.url;
-      generation.thumbnailUrl = data.thumbnailUrl;
-      onGenerationStart(generation);
+      // Update the generation with completed status, thumbnail, and metadata
+      const updatedGeneration = {
+        ...generation,
+        status: 'completed' as const,
+        url: data.url,
+        thumbnailUrl: data.thumbnailUrl,
+        aspectRatio: data.aspectRatio || generation.aspectRatio,
+        duration: data.duration || generation.duration
+      };
+      onGenerationStart(updatedGeneration);
     } catch (err) {
       // Update the generation with failed status
       generation.status = 'failed';
@@ -82,7 +87,7 @@ export default function VideoInputForm({ onGenerationStart, onGenerationComplete
           <textarea
             value={prompt}
             onChange={(e) => setPrompt(e.target.value)}
-            className="flex-1 bg-transparent text-white placeholder-gray-500 outline-none resize-none pl-4 min-h-[24px] pt-6"
+            className="flex-1 bg-transparent text-white placeholder-gray-500 outline-none resize-none pl-4 min-h-[24px] py-6"
             onInput={(e) => {
               const target = e.target as HTMLTextAreaElement;
               target.style.height = 'auto';
