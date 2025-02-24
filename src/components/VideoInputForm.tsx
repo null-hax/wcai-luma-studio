@@ -163,6 +163,14 @@ export default function VideoInputForm({ onGenerationStart, onGenerationComplete
               target.style.height = 'auto';
               target.style.height = target.scrollHeight + 'px';
             }}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                if (prompt.trim() && !disabled) {
+                  handleSubmit(e);
+                }
+              }
+            }}
             placeholder="What do you want to see..."
             disabled={disabled}
           />
