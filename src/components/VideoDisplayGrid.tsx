@@ -32,6 +32,7 @@ export default function VideoDisplayGrid({ onRef, apiKey }: VideoDisplayGridProp
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [hasMore, setHasMore] = useState(true);
   const [offset, setOffset] = useState(0);
+  const [isDeleting, setIsDeleting] = useState<string | null>(null);
   const loadMoreRef = useRef<HTMLDivElement>(null);
 
   const loadGenerations = async (currentOffset: number) => {
@@ -119,6 +120,32 @@ export default function VideoDisplayGrid({ onRef, apiKey }: VideoDisplayGridProp
     });
   }, []);
 
+  const handleDeleteGeneration = async (id: string) => {
+    if (!apiKey || isDeleting) return;
+    
+    try {
+      setIsDeleting(id);
+      
+      const response = await fetch(`/api/generateVideo?id=${id}`, {
+        method: 'DELETE',
+        headers: {
+          'x-api-key': apiKey,
+        },
+      });
+      
+      if (response.ok) {
+        // Remove the deleted generation from the state
+        setGenerations(prev => prev.filter(gen => gen.id !== id));
+      } else {
+        console.error('Failed to delete generation:', await response.text());
+      }
+    } catch (error) {
+      console.error('Error deleting generation:', error);
+    } finally {
+      setIsDeleting(null);
+    }
+  };
+
   const copyPromptToClipboard = async (prompt: string) => {
     try {
       await navigator.clipboard.writeText(prompt);
@@ -169,8 +196,10 @@ export default function VideoDisplayGrid({ onRef, apiKey }: VideoDisplayGridProp
                 </div>
               ) : (
                 <VideoPlayer
+                  id={generation.id}
                   url={generation.url}
                   thumbnailUrl={generation.thumbnailUrl}
+                  onDelete={handleDeleteGeneration}
                 />
               )}
             </div>

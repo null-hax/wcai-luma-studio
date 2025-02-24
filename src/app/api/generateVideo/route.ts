@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { LumaAI } from 'lumaai';
-import { 
-  AspectRatio, 
+import {
+  AspectRatio,
   GenerateVideoRequest,
   VideoGeneration,
   LumaAIGeneration,
-  DEFAULT_ASPECT_RATIO, 
+  DEFAULT_ASPECT_RATIO,
   DEFAULT_DURATION,
   ASPECT_RATIO_LABELS
 } from '@/types/video';
@@ -96,6 +96,44 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ 
       error: error instanceof Error ? error.message : 'An unexpected error occurred',
       code: error instanceof Error ? error.cause : undefined
+    }, { status: 500 });
+  }
+}
+
+export async function DELETE(request: NextRequest) {
+  try {
+    const apiKey = request.headers.get('x-api-key');
+    if (!apiKey) {
+      return NextResponse.json({ error: 'Please set your API key in settings first' }, { status: 401 });
+    }
+
+    const id = request.nextUrl.searchParams.get('id');
+    if (!id) {
+      return NextResponse.json({ error: 'Generation ID is required' }, { status: 400 });
+    }
+
+    const client = getLumaAIClient(apiKey);
+    
+    // Delete the generation
+    await client.generations.delete(id);
+    
+    return NextResponse.json({ success: true });
+  } catch (error: any) {
+    console.error('Error deleting video:', error);
+    
+    // Handle LumaAI API errors
+    if (error?.response?.data) {
+      const apiError = error.response.data;
+      return NextResponse.json({
+        error: apiError.detail || apiError.message || 'API Error',
+        code: apiError.code
+      }, { status: error.response.status || 500 });
+    }
+    
+    // Handle other errors
+    return NextResponse.json({
+      error: error?.message || 'An unexpected error occurred',
+      code: error?.code
     }, { status: 500 });
   }
 }
