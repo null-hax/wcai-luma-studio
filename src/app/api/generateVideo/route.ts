@@ -2,11 +2,13 @@ import { NextRequest, NextResponse } from 'next/server';
 import { LumaAI } from 'lumaai';
 import {
   AspectRatio,
+  Resolution,
   GenerateVideoRequest,
   VideoGeneration,
   LumaAIGeneration,
   DEFAULT_ASPECT_RATIO,
   DEFAULT_DURATION,
+  DEFAULT_RESOLUTION,
   ASPECT_RATIO_LABELS
 } from '@/types/video';
 
@@ -58,15 +60,17 @@ export async function GET(request: NextRequest) {
         // Extract metadata from the full generation response
         const metadata = {
           aspectRatio: fullGeneration.aspect_ratio || fullGeneration.request?.aspect_ratio || gen.aspect_ratio,
+          resolution: fullGeneration.resolution || fullGeneration.request?.resolution,
           duration: fullGeneration.duration || fullGeneration.request?.duration || gen.duration
         };
         
         // Ensure we have valid metadata
         const validatedMetadata = {
-          aspectRatio: metadata.aspectRatio && 
-            Object.keys(ASPECT_RATIO_LABELS).includes(metadata.aspectRatio) ? 
-            metadata.aspectRatio as AspectRatio : 
+          aspectRatio: metadata.aspectRatio &&
+            Object.keys(ASPECT_RATIO_LABELS).includes(metadata.aspectRatio) ?
+            metadata.aspectRatio as AspectRatio :
             DEFAULT_ASPECT_RATIO,
+          resolution: metadata.resolution as Resolution || DEFAULT_RESOLUTION,
           duration: metadata.duration || DEFAULT_DURATION
         };
         
@@ -77,6 +81,7 @@ export async function GET(request: NextRequest) {
           url: fullGeneration.assets?.video,
           thumbnailUrl: fullGeneration.assets?.image,
           aspectRatio: validatedMetadata.aspectRatio,
+          resolution: validatedMetadata.resolution,
           duration: validatedMetadata.duration
         });
       } catch (error) {
@@ -151,17 +156,18 @@ export async function POST(request: NextRequest) {
     }
 
     const client = getLumaAIClient(apiKey);
-    const { prompt, aspectRatio, length } = body;
+    const { prompt, aspectRatio, resolution, length } = body;
     const safeAspectRatio: AspectRatio = aspectRatio ?? DEFAULT_ASPECT_RATIO;
+    const safeResolution: Resolution = resolution ?? DEFAULT_RESOLUTION;
     const safeLength: string = length ?? DEFAULT_DURATION;
     
     // Ensure parameters are valid strings
-    if (typeof safeAspectRatio !== 'string' || typeof safeLength !== 'string') {
+    if (typeof safeAspectRatio !== 'string' || typeof safeResolution !== 'string' || typeof safeLength !== 'string') {
       return NextResponse.json({ error: 'Invalid parameter types' }, { status: 400 });
     }
     
     // Ensure parameters are not empty
-    if (!safeAspectRatio.trim() || !safeLength.trim()) {
+    if (!safeAspectRatio.trim() || !safeResolution.trim() || !safeLength.trim()) {
       return NextResponse.json({ error: 'Missing required parameters' }, { status: 400 });
     }
 
@@ -175,7 +181,7 @@ export async function POST(request: NextRequest) {
     const generationOptions = {
       prompt: prompt,
       model: "ray-2" as const,
-      resolution: "720p",
+      resolution: safeResolution,
       aspect_ratio: safeAspectRatio,
       duration: `${durationInSeconds}s`
     };
@@ -192,6 +198,7 @@ export async function POST(request: NextRequest) {
       id: generation.id,
       status: 'pending',
       aspectRatio: generationOptions.aspect_ratio,
+      resolution: generationOptions.resolution,
       duration: generationOptions.duration
     });
 

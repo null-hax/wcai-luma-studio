@@ -1,9 +1,11 @@
 export type AspectRatio = "1:1" | "16:9" | "9:16" | "4:3" | "3:4" | "21:9" | "9:21";
+export type Resolution = "540p" | "720p" | "1080p";
 
 export interface GenerateVideoRequest {
   prompt: string;
   aspectRatio?: AspectRatio;
   length?: string;
+  resolution?: Resolution;
 }
 
 export interface LumaAIGeneration {
@@ -13,6 +15,7 @@ export interface LumaAIGeneration {
   created_at?: string;
   failure_reason?: string;
   aspect_ratio?: string;
+  resolution?: string;
   duration?: string;
   assets?: {
     video?: string;
@@ -21,6 +24,7 @@ export interface LumaAIGeneration {
   request?: {
     prompt: string;
     aspect_ratio?: string;
+    resolution?: string;
     duration?: string;
   };
 }
@@ -45,13 +49,14 @@ export interface VideoGeneration {
   status: 'pending' | 'completed' | 'failed';
   error?: string;
   aspectRatio: AspectRatio;
+  resolution?: Resolution;
   duration: string;
 }
 
 export const MAX_CONCURRENT_GENERATIONS = 20;
 export const DEFAULT_ASPECT_RATIO: AspectRatio = "16:9";
 export const DEFAULT_DURATION = "5s";
-export const DEFAULT_RESOLUTION = "720p";
+export const DEFAULT_RESOLUTION: Resolution = "1080p";
 
 export const ASPECT_RATIO_LABELS: Record<AspectRatio, string> = {
   "16:9": "16:9 Landscape",
@@ -61,4 +66,10 @@ export const ASPECT_RATIO_LABELS: Record<AspectRatio, string> = {
   "3:4": "3:4 Portrait",
   "21:9": "21:9 Ultrawide",
   "9:21": "9:21 Vertical"
+};
+
+export const RESOLUTION_LABELS: Record<Resolution, string> = {
+  "540p": "540p",
+  "720p": "720p",
+  "1080p": "1080p"
 };

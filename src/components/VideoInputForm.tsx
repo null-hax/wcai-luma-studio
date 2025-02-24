@@ -1,7 +1,15 @@
 "use client";
 
 import { useState } from 'react';
-import { AspectRatio, VideoGeneration, ASPECT_RATIO_LABELS, DEFAULT_ASPECT_RATIO } from '../types/video';
+import {
+  AspectRatio,
+  Resolution,
+  VideoGeneration,
+  ASPECT_RATIO_LABELS,
+  RESOLUTION_LABELS,
+  DEFAULT_ASPECT_RATIO,
+  DEFAULT_RESOLUTION
+} from '../types/video';
 import { v4 as uuidv4 } from 'uuid';
 
 interface VideoInputFormProps {
@@ -12,6 +20,7 @@ interface VideoInputFormProps {
 
 export default function VideoInputForm({ onGenerationStart, onGenerationComplete, disabled }: VideoInputFormProps) {
   const [prompt, setPrompt] = useState('');
+  const [resolution, setResolution] = useState<Resolution>(DEFAULT_RESOLUTION);
   const [aspectRatio, setAspectRatio] = useState<AspectRatio>(DEFAULT_ASPECT_RATIO);
   const [duration, setDuration] = useState('5s');
   const [error, setError] = useState<string | null>(null);
@@ -29,6 +38,7 @@ export default function VideoInputForm({ onGenerationStart, onGenerationComplete
       prompt,
       status: 'pending',
       aspectRatio,
+      resolution,
       duration
     };
 
@@ -49,6 +59,7 @@ export default function VideoInputForm({ onGenerationStart, onGenerationComplete
         body: JSON.stringify({
           prompt,
           aspectRatio,
+          resolution,
           length: duration,
         }),
       });
@@ -65,6 +76,7 @@ export default function VideoInputForm({ onGenerationStart, onGenerationComplete
         prompt,
         status: 'pending',
         aspectRatio: data.aspectRatio || aspectRatio,
+        resolution: data.resolution || resolution,
         duration: data.duration || duration
       };
 
@@ -97,6 +109,7 @@ export default function VideoInputForm({ onGenerationStart, onGenerationComplete
                 url: latestGeneration.url,
                 thumbnailUrl: latestGeneration.thumbnailUrl,
                 aspectRatio: latestGeneration.aspectRatio || generation.aspectRatio,
+                resolution: latestGeneration.resolution || generation.resolution,
                 duration: latestGeneration.duration || generation.duration
               });
             } else if (latestGeneration.status === 'failed') {
@@ -154,6 +167,17 @@ export default function VideoInputForm({ onGenerationStart, onGenerationComplete
             disabled={disabled}
           />
           <div className="flex items-center gap-2">
+            <select
+              value={resolution}
+              onChange={(e) => setResolution(e.target.value as Resolution)}
+              className="bg-transparent text-gray-400 outline-none appearance-none cursor-pointer disabled:cursor-not-allowed"
+              disabled={disabled}
+            >
+              {Object.entries(RESOLUTION_LABELS).map(([value]) => (
+                <option key={value} value={value}>{value}</option>
+              ))}
+            </select>
+            <div className="text-gray-400">·</div>
             <select
               value={aspectRatio}
               onChange={(e) => setAspectRatio(e.target.value as AspectRatio)}

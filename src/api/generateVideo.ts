@@ -3,19 +3,18 @@ import { LumaAI } from 'lumaai';
 import fetch from 'node-fetch';
 import { writeFile } from 'fs/promises';
 import { join, dirname } from 'path';
+import {
+  GenerateVideoRequest,
+  AspectRatio,
+  Resolution,
+  DEFAULT_ASPECT_RATIO,
+  DEFAULT_DURATION,
+  DEFAULT_RESOLUTION
+} from '../types/video';
 
 const client = new LumaAI({
   authToken: process.env.LUMAAI_API_KEY,
 });
-
-interface GenerateVideoRequest {
-  prompt: string;
-  aspectRatio?: string;
-  length?: string;
-}
-
-const DEFAULT_ASPECT_RATIO = "16:9";
-const DEFAULT_DURATION = "5s";
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== 'POST') {
@@ -23,17 +22,18 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    const { prompt, aspectRatio, length } = req.body as GenerateVideoRequest;
-    const safeAspectRatio: string = aspectRatio ?? DEFAULT_ASPECT_RATIO;
+    const { prompt, aspectRatio, resolution, length } = req.body as GenerateVideoRequest;
+    const safeAspectRatio: AspectRatio = aspectRatio as AspectRatio ?? DEFAULT_ASPECT_RATIO;
+    const safeResolution: Resolution = resolution as Resolution ?? DEFAULT_RESOLUTION;
     const safeLength: string = length ?? DEFAULT_DURATION;
     
     // Ensure parameters are valid strings
-    if (typeof safeAspectRatio !== 'string' || typeof safeLength !== 'string') {
+    if (typeof safeAspectRatio !== 'string' || typeof safeResolution !== 'string' || typeof safeLength !== 'string') {
       throw new Error('Invalid parameter types');
     }
     
     // Ensure parameters are not empty
-    if (!safeAspectRatio.trim() || !safeLength.trim()) {
+    if (!safeAspectRatio.trim() || !safeResolution.trim() || !safeLength.trim()) {
       throw new Error('Missing required parameters');
     }
 
@@ -41,7 +41,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const generation = await client.generations.create({
       prompt,
       model: "ray-2",
-      resolution: "720p",
+      resolution: safeResolution,
       duration: safeLength,
     });
 
