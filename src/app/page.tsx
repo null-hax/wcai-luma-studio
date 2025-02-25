@@ -42,7 +42,7 @@ export default function Page() {
         <div className="max-w-7xl mx-auto px-8 py-6">
           <div className="flex justify-between items-start mb-6">
             <div>
-              <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-500 to-purple-500 bg-clip-text text-transparent">Luma API Sequencer</h1>
+              <h1 className="text-3xl text-white uppercase bg-clip-text text-transparent">Luma API <span className="font-bold">Sequencer</span></h1>
               <p className="text-sm text-gray-400 pt-2">by <a href="https://nullhax.com" className="hover:underline" target="_blank">null_hax</a> // <a href="https://westcoastai.xyz" className="hover:underline" target="_blank">West Coast AI Labs</a></p>
               <p className="text-sm text-slate-400 pt-2">
                 <a href="https://github.com/null-hax/wcai-luma-studio" className="hover:underline flex items-center gap-2" target="_blank">

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useRef, useCallback } from 'react';
 import {
   AspectRatio,
   Resolution,
@@ -23,11 +23,128 @@ export default function VideoInputForm({ onGenerationStart, onGenerationComplete
   const [resolution, setResolution] = useState<Resolution>(DEFAULT_RESOLUTION);
   const [aspectRatio, setAspectRatio] = useState<AspectRatio>(DEFAULT_ASPECT_RATIO);
   const [duration, setDuration] = useState('5s');
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<string | undefined>();
+  const [keyframe, setKeyframe] = useState<string | undefined>();
+  const [imageAspectRatio, setImageAspectRatio] = useState<AspectRatio | undefined>();
+  const [isDragging, setIsDragging] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const imgRef = useRef<HTMLImageElement>(null);
+
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(true);
+  }, []);
+
+  const handleDragLeave = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+  }, []);
+
+  const getImageAspectRatio = (width: number, height: number): AspectRatio => {
+    const ratio = width / height;
+    if (Math.abs(ratio - 16/9) < 0.1) return "16:9";
+    if (Math.abs(ratio - 9/16) < 0.1) return "9:16";
+    if (Math.abs(ratio - 1) < 0.1) return "1:1";
+    if (Math.abs(ratio - 4/3) < 0.1) return "4:3";
+    if (Math.abs(ratio - 3/4) < 0.1) return "3:4";
+    if (Math.abs(ratio - 21/9) < 0.1) return "21:9";
+    if (Math.abs(ratio - 9/21) < 0.1) return "9:21";
+    // Default to closest standard ratio
+    if (ratio > 1) return "16:9";
+    return "9:16";
+  };
+
+  const uploadImage = async (file: File) => {
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const response = await fetch('/api/upload', {
+      method: 'POST',
+      body: formData,
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to upload image');
+    }
+
+    const data = await response.json();
+    return data.url;
+  };
+
+  const handleImageUpload = async (file: File) => {
+    try {
+      if (!file.type.startsWith('image/')) {
+        throw new Error('Please upload an image file');
+      }
+
+      setIsUploading(true);
+      const url = await uploadImage(file);
+      
+      // Create a temporary image to get dimensions
+      const img = new Image();
+      img.src = url;
+      await new Promise((resolve, reject) => {
+        img.onload = resolve;
+        img.onerror = reject;
+      });
+
+      const aspectRatio = getImageAspectRatio(img.width, img.height);
+      setImageAspectRatio(aspectRatio);
+      setAspectRatio(aspectRatio);
+      setKeyframe(url);
+      
+      // Force 5s duration and minimum 720p resolution with image
+      setDuration('5s');
+      if (resolution === '540p') {
+        setResolution('720p');
+      }
+
+      setError(undefined);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to upload image');
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  const handleDrop = useCallback(async (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+
+    const file = e.dataTransfer.files[0];
+    if (file) {
+      await handleImageUpload(file);
+    }
+  }, []);
+
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      await handleImageUpload(file);
+    }
+  };
+
+  const clearKeyframe = () => {
+    setKeyframe(undefined);
+    setImageAspectRatio(undefined);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError(null);
+    setError(undefined);
+
+    // Validate that prompt is provided
+    if (!prompt.trim()) {
+      setError('Please provide a prompt');
+      return;
+    }
 
     let pollInterval: NodeJS.Timeout | null = null;
     let pollTimeout: NodeJS.Timeout | null = null;
@@ -39,7 +156,8 @@ export default function VideoInputForm({ onGenerationStart, onGenerationComplete
       status: 'pending',
       aspectRatio,
       resolution,
-      duration
+      duration,
+      keyframe
     };
 
     try {
@@ -61,6 +179,7 @@ export default function VideoInputForm({ onGenerationStart, onGenerationComplete
           aspectRatio,
           resolution,
           length: duration,
+          keyframe
         }),
       });
 
@@ -77,7 +196,8 @@ export default function VideoInputForm({ onGenerationStart, onGenerationComplete
         status: 'pending',
         aspectRatio: data.aspectRatio || aspectRatio,
         resolution: data.resolution || resolution,
-        duration: data.duration || duration
+        duration: data.duration || duration,
+        keyframe
       };
 
       // Add the pending generation to the grid
@@ -151,46 +271,97 @@ export default function VideoInputForm({ onGenerationStart, onGenerationComplete
   };
 
   return (
-    <form onSubmit={handleSubmit} className="relative">
-      <div className="flex items-center gap-2 p-2 bg-slate-900 rounded-2xl">
-        <div className="flex-1 flex items-center gap-2">
-          <textarea
-            value={prompt}
-            onChange={(e) => setPrompt(e.target.value)}
-            className="flex-1 bg-transparent text-white placeholder-gray-500 outline-none resize-none pl-4 min-h-[24px] pt-6"
-            onInput={(e) => {
-              const target = e.target as HTMLTextAreaElement;
-              target.style.height = 'auto';
-              target.style.height = target.scrollHeight + 'px';
-            }}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault();
-                if (prompt.trim() && !disabled) {
-                  handleSubmit(e);
+    <form 
+      onSubmit={handleSubmit} 
+      className={`relative ${isDragging ? 'bg-gray-900/50 ring-2 ring-blue-500/50' : ''}`}
+      onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
+    >
+      <div className="flex flex-col gap-2 p-2 bg-gray-900 rounded-2xl">
+        {keyframe && (
+          <div className="relative px-4">
+            <div className="relative w-12 h-12 rounded">
+              <img
+                ref={imgRef}
+                src={keyframe}
+                alt="Keyframe"
+                className="w-full h-full object-cover"
+              />
+              <button
+                type="button"
+                onClick={clearKeyframe}
+                className="absolute top-0 right-0 -mr-2 -mt-2 p-1 rounded-full bg-gray-900/80 text-gray-400 hover:text-gray-300 hover:scale-110 transition-all shadow-lg group"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
+                  <path d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z" />
+                </svg>
+              </button>
+            </div>
+          </div>
+        )}
+        <div className="flex items-center gap-2">
+          <div className="flex-1">
+            <textarea
+              value={prompt}
+              onChange={(e) => setPrompt(e.target.value)}
+              className="w-full bg-transparent text-white placeholder-gray-500 outline-none resize-none px-4 min-h-[40px] flex items-center"
+              onInput={(e) => {
+                const target = e.target as HTMLTextAreaElement;
+                target.style.height = 'auto';
+                target.style.height = target.scrollHeight + 'px';
+              }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                  e.preventDefault();
+                  if (prompt.trim() && !disabled) {
+                    handleSubmit(e);
+                  }
                 }
-              }
-            }}
-            placeholder="What do you want to see..."
-            disabled={disabled}
-          />
+              }}
+              placeholder="Describe camera or action in the scene..."
+              disabled={disabled}
+              style={{ paddingTop: '10px', paddingBottom: '10px' }}
+            />
+          </div>
           <div className="flex items-center gap-2">
+            <input
+              type="file"
+              ref={fileInputRef}
+              onChange={handleFileSelect}
+              accept="image/*"
+              className="hidden"
+            />
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              className={`p-2 rounded-full hover:bg-white/10 disabled:opacity-50 disabled:cursor-not-allowed ${
+                isUploading ? 'text-gray-500' : keyframe ? 'text-blue-400' : 'text-gray-400'
+              }`}
+              disabled={disabled || isUploading}
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
+                <path fillRule="evenodd" d="M1.5 6a2.25 2.25 0 012.25-2.25h16.5A2.25 2.25 0 0122.5 6v12a2.25 2.25 0 01-2.25 2.25H3.75A2.25 2.25 0 011.5 18V6zM3 16.06V18c0 .414.336.75.75.75h16.5A.75.75 0 0021 18v-1.94l-2.69-2.689a1.5 1.5 0 00-2.12 0l-.88.879.97.97a.75.75 0 11-1.06 1.06l-5.16-5.159a1.5 1.5 0 00-2.12 0L3 16.061zm10.125-7.81a1.125 1.125 0 112.25 0 1.125 1.125 0 01-2.25 0z" clipRule="evenodd" />
+              </svg>
+            </button>
             <select
               value={resolution}
               onChange={(e) => setResolution(e.target.value as Resolution)}
               className="bg-transparent text-gray-400 outline-none appearance-none cursor-pointer disabled:cursor-not-allowed"
               disabled={disabled}
             >
-              {Object.entries(RESOLUTION_LABELS).map(([value]) => (
-                <option key={value} value={value}>{value}</option>
-              ))}
+              {Object.entries(RESOLUTION_LABELS)
+                .filter(([value]) => !keyframe || value !== '540p')
+                .map(([value]) => (
+                  <option key={value} value={value}>{value}</option>
+                ))}
             </select>
             <div className="text-gray-400">·</div>
             <select
               value={aspectRatio}
               onChange={(e) => setAspectRatio(e.target.value as AspectRatio)}
               className="bg-transparent text-gray-400 outline-none appearance-none cursor-pointer disabled:cursor-not-allowed"
-              disabled={disabled}
+              disabled={disabled || !!imageAspectRatio}
             >
               {Object.entries(ASPECT_RATIO_LABELS).map(([value]) => (
                 <option key={value} value={value}>{value}</option>
@@ -199,9 +370,11 @@ export default function VideoInputForm({ onGenerationStart, onGenerationComplete
             <div className="text-gray-400">·</div>
             <button
               type="button"
-              onClick={() => setDuration(duration === '5s' ? '9s' : '5s')}
-              className="text-gray-400 hover:text-gray-300 disabled:cursor-not-allowed disabled:opacity-50"
-              disabled={disabled}
+              onClick={() => !keyframe && setDuration(duration === '5s' ? '9s' : '5s')}
+              className={`text-gray-400 hover:text-gray-300 disabled:cursor-not-allowed disabled:opacity-50 ${
+                keyframe ? 'cursor-not-allowed opacity-50' : ''
+              }`}
+              disabled={disabled || !!keyframe}
             >
               {duration}
             </button>

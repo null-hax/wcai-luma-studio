@@ -6,6 +6,7 @@ export interface GenerateVideoRequest {
   aspectRatio?: AspectRatio;
   length?: string;
   resolution?: Resolution;
+  keyframe?: string; // URL of the keyframe image
 }
 
 export interface LumaAIGeneration {
@@ -26,6 +27,7 @@ export interface LumaAIGeneration {
     aspect_ratio?: string;
     resolution?: string;
     duration?: string;
+    keyframe?: string;
   };
 }
 
@@ -51,6 +53,7 @@ export interface VideoGeneration {
   aspectRatio: AspectRatio;
   resolution?: Resolution;
   duration: string;
+  keyframe?: string;
 }
 
 export const MAX_CONCURRENT_GENERATIONS = 20;

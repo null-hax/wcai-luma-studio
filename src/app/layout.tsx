@@ -8,8 +8,8 @@ export default function RootLayout({
   return (
     <html lang="en">
       <head>
-        <title>Video Generator</title>
-        <meta name="description" content="Generate videos from text prompts" />
+        <title>Luma API Sequencer by West Coast AI Labs</title>
+        <meta name="description" content="A simple interface for interacting with the Luma Labs API." />
       </head>
       <body className="bg-black">
         {children}
