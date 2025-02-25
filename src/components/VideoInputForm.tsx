@@ -281,17 +281,17 @@ export default function VideoInputForm({ onGenerationStart, onGenerationComplete
       <div className="flex flex-col gap-2 p-2 bg-gray-900 rounded-2xl">
         {keyframe && (
           <div className="relative px-4">
-            <div className="relative w-12 h-12 rounded">
+            <div className="relative w-16 h-16 rounded group">
               <img
                 ref={imgRef}
                 src={keyframe}
                 alt="Keyframe"
-                className="w-full h-full object-cover"
+                className="w-full h-full object-cover rounded-md"
               />
               <button
                 type="button"
                 onClick={clearKeyframe}
-                className="absolute top-0 right-0 -mr-2 -mt-2 p-1 rounded-full bg-gray-900/80 text-gray-400 hover:text-gray-300 hover:scale-110 transition-all shadow-lg group"
+                className="absolute hidden group-hover:block top-2 right-2 -mr-2 -mt-2 p-1 rounded-full bg-gray-900/70 text-gray-400 hover:text-gray-300 hover:scale-110 transition-all shadow-lg group z-10"
               >
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
                   <path d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z" />
@@ -305,11 +305,9 @@ export default function VideoInputForm({ onGenerationStart, onGenerationComplete
             <textarea
               value={prompt}
               onChange={(e) => setPrompt(e.target.value)}
-              className="w-full bg-transparent text-white placeholder-gray-500 outline-none resize-none px-4 min-h-[40px] flex items-center"
+              className="w-full bg-transparent text-white placeholder-gray-500 outline-none resize-none px-4 flex py-4"
               onInput={(e) => {
                 const target = e.target as HTMLTextAreaElement;
-                target.style.height = 'auto';
-                target.style.height = target.scrollHeight + 'px';
               }}
               onKeyDown={(e) => {
                 if (e.key === 'Enter' && !e.shiftKey) {
@@ -319,9 +317,8 @@ export default function VideoInputForm({ onGenerationStart, onGenerationComplete
                   }
                 }
               }}
-              placeholder="Describe camera or action in the scene..."
+              placeholder={keyframe ? "Describe camera or action in the scene..." : "What do you want to see..."}
               disabled={disabled}
-              style={{ paddingTop: '10px', paddingBottom: '10px' }}
             />
           </div>
           <div className="flex items-center gap-2">
