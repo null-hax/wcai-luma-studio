@@ -273,12 +273,12 @@ export default function VideoInputForm({ onGenerationStart, onGenerationComplete
   return (
     <form 
       onSubmit={handleSubmit} 
-      className={`relative ${isDragging ? 'bg-[#1a1b26]/50 ring-2 ring-blue-500/50' : ''}`}
+      className={`relative ${isDragging ? 'bg-gray-900/50 ring-2 ring-blue-500/50' : ''}`}
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
     >
-      <div className="flex flex-col gap-2 p-2 bg-[#1a1b26] rounded-2xl">
+      <div className="flex flex-col gap-2 p-2 bg-gray-900 rounded-2xl">
         {keyframe && (
           <div className="relative px-4">
             <div className="relative w-12 h-12 rounded">
