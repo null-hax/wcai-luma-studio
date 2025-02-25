@@ -1,18 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { writeFile, mkdir, unlink } from 'fs/promises';
-import { join } from 'path';
-import { v4 as uuidv4 } from 'uuid';
 
-// Directory to store uploaded files
-const UPLOAD_DIR = join(process.cwd(), 'public', 'uploads');
+const CLOUDINARY_CLOUD_NAME = process.env.CLOUDINARY_CLOUD_NAME;
+const CLOUDINARY_UPLOAD_PRESET = process.env.CLOUDINARY_UPLOAD_PRESET;
 
 export async function POST(request: NextRequest) {
-  let filepath = '';
-  
   try {
-    // Ensure upload directory exists
-    await mkdir(UPLOAD_DIR, { recursive: true });
-
     const formData = await request.formData();
     const file = formData.get('file') as File;
     
@@ -25,48 +17,32 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'File must be an image' }, { status: 400 });
     }
 
-    // Generate unique filename
-    const ext = file.name.split('.').pop();
-    const filename = `${uuidv4()}.${ext}`;
-    filepath = join(UPLOAD_DIR, filename);
-
-    // Convert File to Buffer and save
-    const bytes = await file.arrayBuffer();
-    const buffer = Buffer.from(bytes);
-    await writeFile(filepath, buffer);
-
-    // Get the host from the request
-    const host = request.headers.get('host');
-    if (!host) {
-      throw new Error('Host header is missing');
-    }
-    const protocol = process.env.NODE_ENV === 'development' ? 'http' : 'https';
-
-    // Return the full URL
-    const url = `${protocol}://${host}/uploads/${filename}`;
+    // Create a new FormData instance for Cloudinary
+    const cloudinaryFormData = new FormData();
+    cloudinaryFormData.append('file', file);
+    cloudinaryFormData.append('upload_preset', CLOUDINARY_UPLOAD_PRESET || '');
     
-    // Schedule file deletion after response
-    setTimeout(async () => {
-      try {
-        await unlink(filepath);
-        console.log(`Deleted temporary file: ${filepath}`);
-      } catch (error) {
-        console.error(`Error deleting temporary file: ${filepath}`, error);
+    // Upload to Cloudinary
+    const response = await fetch(
+      `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`,
+      {
+        method: 'POST',
+        body: cloudinaryFormData
       }
-    }, 1000);
+    );
 
-    return NextResponse.json({ url });
+    if (!response.ok) {
+      const errorData = await response.json();
+      console.error('Cloudinary upload error:', errorData);
+      throw new Error('Failed to upload to Cloudinary');
+    }
+
+    const data = await response.json();
+    
+    // Return the secure URL from Cloudinary
+    return NextResponse.json({ url: data.secure_url });
 
   } catch (error) {
-    // Clean up file if it was created
-    if (filepath) {
-      try {
-        await unlink(filepath);
-      } catch (cleanupError) {
-        console.error('Error cleaning up file:', cleanupError);
-      }
-    }
-
     console.error('Error uploading file:', error);
     return NextResponse.json(
       { error: 'Error uploading file' },

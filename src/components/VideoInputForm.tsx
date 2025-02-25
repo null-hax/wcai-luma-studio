@@ -25,9 +25,11 @@ export default function VideoInputForm({ onGenerationStart, onGenerationComplete
   const [duration, setDuration] = useState('5s');
   const [error, setError] = useState<string | undefined>();
   const [keyframe, setKeyframe] = useState<string | undefined>();
+  const [imageAspectRatio, setImageAspectRatio] = useState<AspectRatio | undefined>();
   const [isDragging, setIsDragging] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const imgRef = useRef<HTMLImageElement>(null);
 
   const handleDragOver = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -40,6 +42,20 @@ export default function VideoInputForm({ onGenerationStart, onGenerationComplete
     e.stopPropagation();
     setIsDragging(false);
   }, []);
+
+  const getImageAspectRatio = (width: number, height: number): AspectRatio => {
+    const ratio = width / height;
+    if (Math.abs(ratio - 16/9) < 0.1) return "16:9";
+    if (Math.abs(ratio - 9/16) < 0.1) return "9:16";
+    if (Math.abs(ratio - 1) < 0.1) return "1:1";
+    if (Math.abs(ratio - 4/3) < 0.1) return "4:3";
+    if (Math.abs(ratio - 3/4) < 0.1) return "3:4";
+    if (Math.abs(ratio - 21/9) < 0.1) return "21:9";
+    if (Math.abs(ratio - 9/21) < 0.1) return "9:21";
+    // Default to closest standard ratio
+    if (ratio > 1) return "16:9";
+    return "9:16";
+  };
 
   const uploadImage = async (file: File) => {
     const formData = new FormData();
@@ -66,7 +82,26 @@ export default function VideoInputForm({ onGenerationStart, onGenerationComplete
 
       setIsUploading(true);
       const url = await uploadImage(file);
+      
+      // Create a temporary image to get dimensions
+      const img = new Image();
+      img.src = url;
+      await new Promise((resolve, reject) => {
+        img.onload = resolve;
+        img.onerror = reject;
+      });
+
+      const aspectRatio = getImageAspectRatio(img.width, img.height);
+      setImageAspectRatio(aspectRatio);
+      setAspectRatio(aspectRatio);
       setKeyframe(url);
+      
+      // Force 5s duration and minimum 720p resolution with image
+      setDuration('5s');
+      if (resolution === '540p') {
+        setResolution('720p');
+      }
+
       setError(undefined);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to upload image');
@@ -95,6 +130,7 @@ export default function VideoInputForm({ onGenerationStart, onGenerationComplete
 
   const clearKeyframe = () => {
     setKeyframe(undefined);
+    setImageAspectRatio(undefined);
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
@@ -103,6 +139,12 @@ export default function VideoInputForm({ onGenerationStart, onGenerationComplete
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(undefined);
+
+    // Validate that prompt is provided
+    if (!prompt.trim()) {
+      setError('Please provide a prompt');
+      return;
+    }
 
     let pollInterval: NodeJS.Timeout | null = null;
     let pollTimeout: NodeJS.Timeout | null = null;
@@ -238,23 +280,24 @@ export default function VideoInputForm({ onGenerationStart, onGenerationComplete
     >
       <div className="flex flex-col gap-2 p-2 bg-[#1a1b26] rounded-2xl">
         {keyframe && (
-          <div className="flex items-center gap-2 px-4">
-            <div className="relative w-12 h-12 rounded overflow-hidden">
+          <div className="relative px-4">
+            <div className="relative w-12 h-12 rounded">
               <img
+                ref={imgRef}
                 src={keyframe}
                 alt="Keyframe"
                 className="w-full h-full object-cover"
               />
+              <button
+                type="button"
+                onClick={clearKeyframe}
+                className="absolute top-0 right-0 -mr-2 -mt-2 p-1 rounded-full bg-gray-900/80 text-gray-400 hover:text-gray-300 hover:scale-110 transition-all shadow-lg group"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
+                  <path d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z" />
+                </svg>
+              </button>
             </div>
-            <button
-              type="button"
-              onClick={clearKeyframe}
-              className="text-gray-400 hover:text-gray-300"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
-                <path d="M6.28 5.22a.75.75 0 00-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 101.06 1.06L10 11.06l3.72 3.72a.75.75 0 101.06-1.06L11.06 10l3.72-3.72a.75.75 0 00-1.06-1.06L10 8.94 6.28 5.22z" />
-              </svg>
-            </button>
           </div>
         )}
         <div className="flex items-center gap-2">
@@ -262,7 +305,7 @@ export default function VideoInputForm({ onGenerationStart, onGenerationComplete
             <textarea
               value={prompt}
               onChange={(e) => setPrompt(e.target.value)}
-              className="w-full bg-transparent text-white placeholder-gray-500 outline-none resize-none px-4 min-h-[24px]"
+              className="w-full bg-transparent text-white placeholder-gray-500 outline-none resize-none px-4 min-h-[40px] flex items-center"
               onInput={(e) => {
                 const target = e.target as HTMLTextAreaElement;
                 target.style.height = 'auto';
@@ -278,6 +321,7 @@ export default function VideoInputForm({ onGenerationStart, onGenerationComplete
               }}
               placeholder="Describe camera or action in the scene..."
               disabled={disabled}
+              style={{ paddingTop: '10px', paddingBottom: '10px' }}
             />
           </div>
           <div className="flex items-center gap-2">
@@ -306,16 +350,18 @@ export default function VideoInputForm({ onGenerationStart, onGenerationComplete
               className="bg-transparent text-gray-400 outline-none appearance-none cursor-pointer disabled:cursor-not-allowed"
               disabled={disabled}
             >
-              {Object.entries(RESOLUTION_LABELS).map(([value]) => (
-                <option key={value} value={value}>{value}</option>
-              ))}
+              {Object.entries(RESOLUTION_LABELS)
+                .filter(([value]) => !keyframe || value !== '540p')
+                .map(([value]) => (
+                  <option key={value} value={value}>{value}</option>
+                ))}
             </select>
             <div className="text-gray-400">·</div>
             <select
               value={aspectRatio}
               onChange={(e) => setAspectRatio(e.target.value as AspectRatio)}
               className="bg-transparent text-gray-400 outline-none appearance-none cursor-pointer disabled:cursor-not-allowed"
-              disabled={disabled}
+              disabled={disabled || !!imageAspectRatio}
             >
               {Object.entries(ASPECT_RATIO_LABELS).map(([value]) => (
                 <option key={value} value={value}>{value}</option>
@@ -324,9 +370,11 @@ export default function VideoInputForm({ onGenerationStart, onGenerationComplete
             <div className="text-gray-400">·</div>
             <button
               type="button"
-              onClick={() => setDuration(duration === '5s' ? '9s' : '5s')}
-              className="text-gray-400 hover:text-gray-300 disabled:cursor-not-allowed disabled:opacity-50"
-              disabled={disabled}
+              onClick={() => !keyframe && setDuration(duration === '5s' ? '9s' : '5s')}
+              className={`text-gray-400 hover:text-gray-300 disabled:cursor-not-allowed disabled:opacity-50 ${
+                keyframe ? 'cursor-not-allowed opacity-50' : ''
+              }`}
+              disabled={disabled || !!keyframe}
             >
               {duration}
             </button>

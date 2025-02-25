@@ -109,14 +109,19 @@ export default function VideoDisplayGrid({ onRef, apiKey }: VideoDisplayGridProp
     setGenerations(prev => {
       // Check if this generation already exists
       const existingIndex = prev.findIndex(g => g.id === generation.id);
+      
+      // Create a new array to ensure React detects the change
+      const newGenerations = [...prev];
+      
       if (existingIndex !== -1) {
         // Update existing generation
-        const newGenerations = [...prev];
         newGenerations[existingIndex] = generation;
-        return newGenerations;
+      } else {
+        // Add new generation at the beginning
+        newGenerations.unshift(generation);
       }
-      // Add new generation
-      return [generation, ...prev];
+      
+      return newGenerations;
     });
   }, []);
 
@@ -210,7 +215,7 @@ export default function VideoDisplayGrid({ onRef, apiKey }: VideoDisplayGridProp
               <p className="text-sm text-gray-300 line-clamp-2">{generation.prompt}</p>
               <div className="flex items-center justify-between mt-2">
                 <p className="text-xs text-gray-500">
-                  {generation.aspectRatio} • {generation.duration}
+                {generation.resolution} • {generation.aspectRatio} • {generation.duration}
                 </p>
                 <span className="text-xs text-blue-400 group-hover:text-blue-300">Click to copy prompt</span>
               </div>
