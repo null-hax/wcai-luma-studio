@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { VideoGeneration, ListGenerationsResponse } from '../types/video';
 import VideoPlayer from './VideoPlayer';
+import VideoModal from './VideoModal';
 
 interface VideoDisplayGridProps {
   onRef?: (ref: { 
@@ -33,6 +34,7 @@ export default function VideoDisplayGrid({ onRef, apiKey }: VideoDisplayGridProp
   const [hasMore, setHasMore] = useState(true);
   const [offset, setOffset] = useState(0);
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
+  const [selectedVideo, setSelectedVideo] = useState<VideoGeneration | null>(null);
   const loadMoreRef = useRef<HTMLDivElement>(null);
 
   const loadGenerations = async (currentOffset: number) => {
@@ -159,6 +161,12 @@ export default function VideoDisplayGrid({ onRef, apiKey }: VideoDisplayGridProp
     }
   };
 
+  const handleVideoClick = (generation: VideoGeneration) => {
+    if (generation.status === 'completed') {
+      setSelectedVideo(generation);
+    }
+  };
+
   // Expose functions to parent
   useEffect(() => {
     if (onRef) {
@@ -190,7 +198,10 @@ export default function VideoDisplayGrid({ onRef, apiKey }: VideoDisplayGridProp
             key={generation.id} 
             className="bg-gray-800 rounded-lg overflow-hidden"
           >
-            <div className="aspect-video">
+            <div
+              className="aspect-video cursor-pointer"
+              onClick={() => handleVideoClick(generation)}
+            >
               {generation.status === 'pending' ? (
                 <div className="w-full h-full bg-gray-900 flex items-center justify-center">
                   <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
@@ -233,6 +244,12 @@ export default function VideoDisplayGrid({ onRef, apiKey }: VideoDisplayGridProp
           <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500"></div>
         </div>
       )}
+
+      {/* Video Modal */}
+      <VideoModal
+        video={selectedVideo}
+        onClose={() => setSelectedVideo(null)}
+      />
     </div>
   );
 }
