@@ -89,7 +89,8 @@ export default function VideoPlayer({ url, thumbnailUrl, id, onDelete }: VideoPl
   const handleMouseEnter = () => setIsHovering(true);
   const handleMouseLeave = () => setIsHovering(false);
 
-  const handleDownload = async () => {
+  const handleDownload = async (e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent modal from opening
     if (!url) return;
     
     try {
@@ -108,7 +109,8 @@ export default function VideoPlayer({ url, thumbnailUrl, id, onDelete }: VideoPl
     }
   };
 
-  const handleDelete = () => {
+  const handleDelete = (e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent modal from opening
     if (id && onDelete) {
       onDelete(id);
     }
