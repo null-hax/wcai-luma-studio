@@ -82,7 +82,8 @@ export async function GET(request: NextRequest) {
           thumbnailUrl: fullGeneration.assets?.image,
           aspectRatio: validatedMetadata.aspectRatio,
           resolution: validatedMetadata.resolution,
-          duration: validatedMetadata.duration
+          duration: validatedMetadata.duration,
+          keyframe: fullGeneration.request?.keyframe
         });
       } catch (error) {
         console.error(`Error fetching details for generation ${gen.id}:`, error);
@@ -156,7 +157,7 @@ export async function POST(request: NextRequest) {
     }
 
     const client = getLumaAIClient(apiKey);
-    const { prompt, aspectRatio, resolution, length } = body;
+    const { prompt, aspectRatio, resolution, length, keyframe } = body;
     const safeAspectRatio: AspectRatio = aspectRatio ?? DEFAULT_ASPECT_RATIO;
     const safeResolution: Resolution = resolution ?? DEFAULT_RESOLUTION;
     const safeLength: string = length ?? DEFAULT_DURATION;
@@ -183,7 +184,13 @@ export async function POST(request: NextRequest) {
       model: "ray-2" as const,
       resolution: safeResolution,
       aspect_ratio: safeAspectRatio,
-      duration: `${durationInSeconds}s`
+      duration: `${durationInSeconds}s`,
+      keyframes: keyframe ? {
+        frame0: {
+          type: "image" as const,
+          url: keyframe
+        }
+      } : undefined
     };
 
     console.log('Creating generation with params:', generationOptions);
@@ -199,7 +206,8 @@ export async function POST(request: NextRequest) {
       status: 'pending',
       aspectRatio: generationOptions.aspect_ratio,
       resolution: generationOptions.resolution,
-      duration: generationOptions.duration
+      duration: generationOptions.duration,
+      keyframe
     });
 
   } catch (error: any) {
