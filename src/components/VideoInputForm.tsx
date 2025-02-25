@@ -43,7 +43,7 @@ export default function VideoInputForm({ onGenerationStart, onGenerationComplete
     setIsDragging(false);
   }, []);
 
-  const getImageAspectRatio = (width: number, height: number): AspectRatio => {
+  const getImageAspectRatio = useCallback((width: number, height: number): AspectRatio => {
     const ratio = width / height;
     if (Math.abs(ratio - 16/9) < 0.1) return "16:9";
     if (Math.abs(ratio - 9/16) < 0.1) return "9:16";
@@ -55,9 +55,9 @@ export default function VideoInputForm({ onGenerationStart, onGenerationComplete
     // Default to closest standard ratio
     if (ratio > 1) return "16:9";
     return "9:16";
-  };
+  }, []);
 
-  const uploadImage = async (file: File) => {
+  const uploadImage = useCallback(async (file: File) => {
     const formData = new FormData();
     formData.append('file', file);
 
@@ -72,9 +72,9 @@ export default function VideoInputForm({ onGenerationStart, onGenerationComplete
 
     const data = await response.json();
     return data.url;
-  };
+  }, []);
 
-  const handleImageUpload = async (file: File) => {
+  const handleImageUpload = useCallback(async (file: File) => {
     try {
       if (!file.type.startsWith('image/')) {
         throw new Error('Please upload an image file');
@@ -108,7 +108,7 @@ export default function VideoInputForm({ onGenerationStart, onGenerationComplete
     } finally {
       setIsUploading(false);
     }
-  };
+  }, [getImageAspectRatio, resolution, uploadImage]);
 
   const handleDrop = useCallback(async (e: React.DragEvent) => {
     e.preventDefault();
@@ -119,7 +119,7 @@ export default function VideoInputForm({ onGenerationStart, onGenerationComplete
     if (file) {
       await handleImageUpload(file);
     }
-  }, []);
+  }, [handleImageUpload]);
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -306,8 +306,8 @@ export default function VideoInputForm({ onGenerationStart, onGenerationComplete
               value={prompt}
               onChange={(e) => setPrompt(e.target.value)}
               className="w-full bg-transparent text-white placeholder-gray-500 outline-none resize-none px-4 flex py-4"
-              onInput={(e) => {
-                const target = e.target as HTMLTextAreaElement;
+              onInput={() => {
+                // No-op or remove this handler if not needed
               }}
               onKeyDown={(e) => {
                 if (e.key === 'Enter' && !e.shiftKey) {

@@ -37,7 +37,7 @@ export default function VideoDisplayGrid({ onRef, apiKey }: VideoDisplayGridProp
   const [selectedVideo, setSelectedVideo] = useState<VideoGeneration | null>(null);
   const loadMoreRef = useRef<HTMLDivElement>(null);
 
-  const loadGenerations = async (currentOffset: number) => {
+  const loadGenerations = useCallback(async (currentOffset: number) => {
     try {
       if (!apiKey) return;
 
@@ -74,12 +74,12 @@ export default function VideoDisplayGrid({ onRef, apiKey }: VideoDisplayGridProp
       setIsLoading(false);
       setIsLoadingMore(false);
     }
-  };
+  }, [apiKey]);
 
   // Initial load
   useEffect(() => {
     loadGenerations(0);
-  }, [apiKey]);
+  }, [apiKey, loadGenerations]);
 
   // Infinite scroll
   useEffect(() => {
@@ -97,7 +97,7 @@ export default function VideoDisplayGrid({ onRef, apiKey }: VideoDisplayGridProp
 
     observer.observe(loadMoreRef.current);
     return () => observer.disconnect();
-  }, [hasMore, isLoadingMore, offset, apiKey]);
+  }, [hasMore, isLoadingMore, offset, apiKey, loadGenerations]);
 
   const reset = useCallback(() => {
     setGenerations([]);
@@ -105,7 +105,7 @@ export default function VideoDisplayGrid({ onRef, apiKey }: VideoDisplayGridProp
     setHasMore(true);
     setIsLoading(true);
     loadGenerations(0);
-  }, []);
+  }, [loadGenerations]);
 
   const addGeneration = useCallback((generation: VideoGeneration) => {
     setGenerations(prev => {
